@@ -194,7 +194,7 @@ function GuildAutoGreeter:SelectRandomMessage(tbl)
 end
 
 
-function GuildAutoGreeter:AddMessageToQueue(messsage, messageType, playerName)
+function GuildAutoGreeter:AddMessageToQueue(message, messageType, playerName)
   local t = {
     msg = string.gsub(message, "{player}", playerName),
     type = messageType,
