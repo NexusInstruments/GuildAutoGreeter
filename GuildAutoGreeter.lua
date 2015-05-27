@@ -7,7 +7,7 @@ local GuildAutoGreeterInst
 local strInstructions = "Use {player} in a message to insert the player name.\n" ..
                         "To have a random message chosen, place multiple messages on separate lines."
 
-local strAddonVersion = "1.3"
+local strAddonVersion = "1.8"
 
 local defaultSettings =
 {
@@ -99,33 +99,31 @@ function GuildAutoGreeter:OnDocLoaded()
 
   Apollo.RegisterEventHandler("InterfaceMenuListHasLoaded", "OnInterfaceMenuListHasLoaded", self)
   Apollo.RegisterEventHandler("Generic_ToggleGuildAutoGreeter", "OnGuildGreetOptions", self)
-  Apollo.RegisterEventHandler("ChatMessage", "OnChatMessage", self)
+  --Apollo.RegisterEventHandler("ChatMessage", "OnChatMessage", self)
+  Apollo.RegisterEventHandler("GuildResult", "OnGuildResult", self) -- game client initiated events
 
   Apollo.RegisterTimerHandler("GreetTimer", "OnGreetTimerUpdate", self)
   Apollo.CreateTimer("GreetTimer", 4, true)
 end
 
 function GuildAutoGreeter:OnGreeterMessage(channel, tMsg)
-  if type(tMsg.player) ~= "string" then
+  if type(tMsg) ~= "string" then
     return
   end
 
   -- Count greeting from another player and update the count for the greeted player
-  self:IncrPlayerGreeting(tMsg.player)
+  self:IncrPlayerGreeting(tMsg)
 end
 
 function GuildAutoGreeter:OnGreetTimerUpdate(strVar, nValue)
   if #self.tQueuedData > 0 then
     local tMessage = self.tQueuedData[1]
     table.remove(self.tQueuedData, 1)
-    local t = {
-      player = tMessage.player
-    }
 
     ChatSystemLib.Command("/g " .. tMessage.msg)
     if (tMessage.type == "salutation") then
       if self.commChannel ~= nil then
-        self.commChannel:SendMessage(t)
+        self.commChannel:SendMessage(tMessage.player)
       end
     end
   else
@@ -141,77 +139,77 @@ function GuildAutoGreeter:IncrPlayerGreeting(strPlayer)
   end
 end
 
-function GuildAutoGreeter:OnChatMessage(channelCurrent, tMessage)
-  --tMessage has bAutoResponse, bGM, bSelf, strSender, strRealmName, nPresenceState, arMessageSegments, unitSource, bShowChatBubble, bCrossFaction, nReportId
-  -- arMessageSegments is an array of tables.  Each table representsa part of the message + the formatting for that segment.
-  -- This allows us to signal font (alien text for example) changes mid stream.
-  -- local example = arMessageSegments[1]
-  -- example.strText is the text
 
-  -- If the addon is enabled
+function GuildAutoGreeter:OnGuildResult(guildSender, strName, nRank, eResult )
+  local guildType = guildSender:GetType()
+  if self.config.enabled == true and FriendshipLib.GetPersonalStatus() ~= FriendshipLib.AccountPresenceState_Away	then
+    if guildType == 1 then
+      if eResult == GuildLib.GuildResult_InviteAccepted then
+        -- Do Member joined with strName
+        self:SendGuildWelcome(strName)
+      elseif eResult == GuildLib.GuildResult_MemberOnline then
+        -- Do Member Online with strName
+        self:SendGuildSalutation(strName)
+      end
+    end
+  end
+end
 
-  if self.config.enabled == true then
-    if FriendshipLib.GetPersonalStatus() ~= FriendshipLib.AccountPresenceState_Away	 then
-      if channelCurrent:GetType() == 15 then --guild
-        text = tMessage.arMessageSegments[1].strText
-        splitText = text:split(" ")
-        playerName = splitText[1]
 
-        -- Guild Join Message
-        if self.config.welcome == true then
-          if splitText[3] == "joined" then
-            if self.strJoinedMessage ~= "" and self.strJoinedMessage ~= nil then
-              local tSplitMessages = string.split(self.strJoinedMessage, "\n")
-              local count = #tSplitMessages
-              local idx = math.random(count)
-              local t = {
-                msg = string.gsub(tSplitMessages[idx], "{player}", playerName),
-                type = "welcome",
-                player = playerName
-              }
-              table.insert(self.tQueuedData, t)
-              Apollo.StartTimer("GreetTimer")
-            end
-          end
-        end
+-- Send Message when player joins guild
+function GuildAutoGreeter:SendGuildWelcome(playerName)
+  if self.config.welcome == true then
+    if self.strJoinedMessage ~= "" and self.strJoinedMessage ~= nil then
+      local message = self:SelectRandomMessage(self.strJoinedMessage)
+      self:AddmessageToQueue(message, "welcome", playerName)
+    end
+  end
+end
 
-        -- Guild Online Message
-        if self.config.salutation == true then
-          if splitText[4] == "online." then
-            if self.strSalutationMessage ~= "" and self.strSalutationMessage ~= nil then
-              -- Only Greet if other people's greetings haven't crossed the threshold
-              if self.playersGreeted[playerName] == nil or self.playersGreeted[playerName] < self.config.greetingThreshold then
-                -- Only Greet if you haven't greeted once.
-                if self.playersGreetedSelf[player] == nil then
-                  local tSplitMessages = string.split(self.strSalutationMessage, "\n")
-                  local count = #tSplitMessages
-                  local idx = math.random(count)
-                  local t = {
-                    msg = string.gsub(string.sub(tSplitMessages[idx],1,100), "{player}", playerName),
-                    type = "salutation",
-                    player = playerName
-                  }
-                  self.playersGreetedSelf[playerName] = true
-                  table.insert(self.tQueuedData, t)
-                  Apollo.StartTimer("GreetTimer")
-                end
-              end
-            end
-          end
+
+-- Send Message when player comes online
+function GuildAutoGreeter:SendGuildSalutation(playerName)
+  if self.config.salutation == true then
+    if self.strSalutationMessage ~= "" and self.strSalutationMessage ~= nil then
+      -- Only Greet if other people's greetings haven't crossed the threshold
+      if self.playersGreeted[playerName] == nil or self.playersGreeted[playerName] < self.config.greetingThreshold then
+        -- Only Greet if you haven't greeted once.
+        if self.playersGreetedSelf[playerName] == nil then
+          local message = self:SelectRandomMessage(self.strSalutationMessage)
+          self:AddMessageToQueue(message, "salutation", playerName)
+          self.playersGreetedSelf[playerName] = true
         end
       end
     end
   end
 end
 
+
+function GuildAutoGreeter:SelectRandomMessage(tbl)
+  local tSplitMessages = string.split(tbl, "\n")
+  local count = #tSplitMessages
+  local idx = math.random(count)
+  -- return truncated message so that only first 100 characters are returned
+  return string.sub(tSplitMessages[idx],1,100)
+end
+
+
+function GuildAutoGreeter:AddMessageToQueue(messsage, messageType, playerName)
+  local t = {
+    msg = string.gsub(message, "{player}", playerName),
+    type = messageType,
+    player = playerName
+  }
+  table.insert(self.tQueuedData, t)
+  Apollo.StartTimer("GreetTimer")
+end
+
 function GuildAutoGreeter:OnInterfaceMenuListHasLoaded()
   Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "GuildAutoGreeter", {"Generic_ToggleGuildAutoGreeter", "", "CRB_Basekit:kitIcon_Holo_Social"})
-
   self.playerUnit = GameLib.GetPlayerUnit()
   self.strPlayerGuild = self.playerUnit:GetGuildName()
   if self.strPlayerGuild ~= nil then
-    self.strGuildChannelName = "AutoGreeter"
-    self.commChannel = ICCommLib.JoinChannel(self.strGuildChannelName, ICCommLib.CodeEnumICCommChannelType.Guild, GuildLib.GetGuilds()[1])
+    self.commChannel = ICCommLib.JoinChannel("GuildAutoGreeter", ICCommLib.CodeEnumICCommChannelType.Guild, GuildLib.GetGuilds()[1])
     self.commChannel:SetReceivedMessageFunction("OnGreeterMessage", self)
     --self.commChannel:SetSendMessageResultFunction("OnGreeterMessage", self)
     --self.commChannel:SetJoinResultFunction("OnChannelJoin", self)
