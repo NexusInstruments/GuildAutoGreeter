@@ -1,0 +1,4 @@
+Version 1.8
+* Complete overhaul on how the addon detects when a user joins or comes online
+* Updated to API Version 10
+* Update IComm functionality to be compliant with API Version 10
