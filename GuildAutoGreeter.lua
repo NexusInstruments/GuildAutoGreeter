@@ -7,7 +7,7 @@ local GuildAutoGreeterInst
 local strInstructions = "Use {player} in a message to insert the player name.\n" ..
                         "To have a random message chosen, place multiple messages on separate lines."
 
-local strAddonVersion = "1.8"
+local strAddonVersion = "1.8.2"
 
 local defaultSettings =
 {
@@ -161,7 +161,7 @@ function GuildAutoGreeter:SendGuildWelcome(playerName)
   if self.config.welcome == true then
     if self.strJoinedMessage ~= "" and self.strJoinedMessage ~= nil then
       local message = self:SelectRandomMessage(self.strJoinedMessage)
-      self:AddmessageToQueue(message, "welcome", playerName)
+      self:AddMessageToQueue(message, "welcome", playerName)
     end
   end
 end
@@ -195,8 +195,9 @@ end
 
 
 function GuildAutoGreeter:AddMessageToQueue(message, messageType, playerName)
+  firstName = string.split(playerName, " ")[1]
   local t = {
-    msg = string.gsub(message, "{player}", playerName),
+    msg = string.gsub(message, "{player}", firstName),
     type = messageType,
     player = playerName
   }
