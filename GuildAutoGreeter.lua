@@ -7,7 +7,8 @@ local GuildAutoGreeterInst
 local strInstructions = "Use {player} in a message to insert the player name.\n" ..
                         "To have a random message chosen, place multiple messages on separate lines."
 
-local strAddonVersion = "1.8.2"
+local Major, Minor, Patch, Suffix = 1, 8, 3, 0
+local GUILDAUTOGREETER_CURRENT_VERSION = string.format("%d.%d.%d", Major, Minor, Patch)
 
 local defaultSettings =
 {
@@ -218,6 +219,9 @@ function GuildAutoGreeter:OnInterfaceMenuListHasLoaded()
     self.strGuildChannelName = ""
     self.commChannel = nil
   end
+
+  -- Report Self
+  Event_FireGenericEvent("OneVersion_ReportAddonInfo", "GuildAutoGreeter", Major, Minor, Patch, Suffix, false)
 end
 
 function GuildAutoGreeter:OnOK()
@@ -240,7 +244,7 @@ function GuildAutoGreeter:OnSave(eLevel)
     end
 
   local tSavedData = {
-    addonConfigVersion = strAddonVersion,
+    addonConfigVersion = GUILDAUTOGREETER_CURRENT_VERSION,
     salutation = self.strSalutationMessage,
     welcome = self.strJoinedMessage,
     config = self.config
@@ -252,7 +256,7 @@ function GuildAutoGreeter:OnRestore(eLevel, tSavedData)
   if eLevel ~= GameLib.CodeEnumAddonSaveLevel.Character then
     return
   end
-  if tSavedData.addonConfigVersion  == strAddonVersion then
+  if tSavedData.addonConfigVersion == GUILDAUTOGREETER_CURRENT_VERSION then
     self.strJoinedMessage = tSavedData.welcome
     self.strSalutationMessage = tSavedData.salutation
     if tSavedData.config then
