@@ -7,7 +7,7 @@ local GuildAutoGreeterInst
 local strInstructions = "Use {player} in a message to insert the player name.\n" ..
                         "To have a random message chosen, place multiple messages on separate lines."
 
-local Major, Minor, Patch, Suffix = 1, 8, 3, 0
+local Major, Minor, Patch, Suffix = 1, 8, 4, 0
 local GUILDAUTOGREETER_CURRENT_VERSION = string.format("%d.%d.%d", Major, Minor, Patch)
 
 local defaultSettings =
@@ -123,9 +123,7 @@ function GuildAutoGreeter:OnGreetTimerUpdate(strVar, nValue)
 
     ChatSystemLib.Command("/g " .. tMessage.msg)
     if (tMessage.type == "salutation") then
-      if self.commChannel ~= nil then
-        self.commChannel:SendMessage(tMessage.player)
-      end
+      self:SendMessage(tMessage.player)
     end
   else
     Apollo.StopTimer("GreetTimer")
@@ -211,8 +209,7 @@ function GuildAutoGreeter:OnInterfaceMenuListHasLoaded()
   self.playerUnit = GameLib.GetPlayerUnit()
   self.strPlayerGuild = self.playerUnit:GetGuildName()
   if self.strPlayerGuild ~= nil then
-    self.commChannel = ICCommLib.JoinChannel("GuildAutoGreeter", ICCommLib.CodeEnumICCommChannelType.Guild, GuildLib.GetGuilds()[1])
-    self.commChannel:SetReceivedMessageFunction("OnGreeterMessage", self)
+    self:UpdateCommChannel()
     --self.commChannel:SetSendMessageResultFunction("OnGreeterMessage", self)
     --self.commChannel:SetJoinResultFunction("OnChannelJoin", self)
   else
@@ -223,6 +220,31 @@ function GuildAutoGreeter:OnInterfaceMenuListHasLoaded()
   -- Report Self
   Event_FireGenericEvent("OneVersion_ReportAddonInfo", "GuildAutoGreeter", Major, Minor, Patch, Suffix, false)
 end
+
+function GuildAutoGreeter:UpdateCommChannel()
+  if not self.commChannel then
+    self.commChannel = ICCommLib.JoinChannel("GuildAutoGreeter", ICCommLib.CodeEnumICCommChannelType.Guild, GuildLib.GetGuilds()[1])
+  end
+
+  if self.commChannel:IsReady() then
+    self.commChannel:SetReceivedMessageFunction("OnGreeterMessage", self)
+  else
+    -- Channel not ready yet, repeat in a few seconds
+    Apollo.CreateTimer("UpdateCommChannel", 1, false)
+    Apollo.StartTimer("UpdateCommChannel")
+  end
+end
+
+function GuildAutoGreeter:SendMessage(msg)
+  if not self.commChannel then
+      Print("[GuildAutoGreeter] Error sending Markers. Attempting to fix this now. If this issue persists, contact the developers")
+      self:UpdateCommChannel()
+      return false
+  else
+      self.commChannel:SendMessage(msg)
+  end
+end
+
 
 function GuildAutoGreeter:OnOK()
   wndGreeting = self.wndMain:FindChild("Greeting")
