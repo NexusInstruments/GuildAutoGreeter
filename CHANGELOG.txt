@@ -1,3 +1,6 @@
+# Version 1.9.0
+* Updated API Version to 11
+
 # Version 1.8.4
 * Changed Comm channel initialization to be more reliable
 
