@@ -1,3 +1,7 @@
+# Version 1.9.1
+* Converted to SimpleUtils library (https://github.com/NexusInstruments/SimpleUtils)
+* Changed Default state for Salutations to be disabled (these are annoying when enabled by default)
+
 # Version 1.9.0
 * Updated API Version to 11
 
