@@ -3,53 +3,21 @@ require "ICCommLib"
 
 local GuildAutoGreeter = {}
 local GuildAutoGreeterInst
+local Utils = Apollo.GetPackage("SimpleUtils").tPackage
 
 local strInstructions = "Use {player} in a message to insert the player name.\n" ..
                         "To have a random message chosen, place multiple messages on separate lines."
 
-local Major, Minor, Patch, Suffix = 1, 9, 0, 0
+local Major, Minor, Patch, Suffix = 1, 10, 0, 0
 local GUILDAUTOGREETER_CURRENT_VERSION = string.format("%d.%d.%d", Major, Minor, Patch)
 
 local defaultSettings =
 {
   enabled = true,
-  salutation = true,
+  salutation = false,
   welcome = true,
   greetingThreshold = 3
 }
-
-function string:split(inSplitPattern, outResults )
-   if not outResults then
-      outResults = { }
-   end
-   local theStart = 1
-   local theSplitStart, theSplitEnd = string.find( self, inSplitPattern, theStart )
-   while theSplitStart do
-      table.insert( outResults, string.sub( self, theStart, theSplitStart-1 ) )
-      theStart = theSplitEnd + 1
-      theSplitStart, theSplitEnd = string.find( self, inSplitPattern, theStart )
-   end
-   table.insert( outResults, string.sub( self, theStart ) )
-   return outResults
-end
-
-function shallowcopy(orig)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in pairs(orig) do
-            copy[orig_key] = orig_value
-        end
-    else -- number, string, boolean, etc
-        copy = orig
-    end
-    return copy
-end
-
-local function CPrint(string)
-  ChatSystemLib.PostOnChannel(ChatSystemLib.ChatChannel_Command, string, "")
-end
 
 function GuildAutoGreeter:new(o)
     o = o or {}
@@ -282,7 +250,7 @@ function GuildAutoGreeter:OnRestore(eLevel, tSavedData)
     self.strJoinedMessage = tSavedData.welcome
     self.strSalutationMessage = tSavedData.salutation
     if tSavedData.config then
-      self.config = shallowcopy(tSavedData.config)
+      self.config = deepcopy(tSavedData.config)
     end
   end
 end
@@ -290,14 +258,14 @@ end
 function GuildAutoGreeter:OnSlashCommand(sCmd, sInput)
   local s = string.lower(sInput)
   if s == nil or s == "" or s == "help" then
-    CPrint("GuildAutoGreeter")
-    CPrint("Usage:  /autogreet <command>")
-    CPrint("============================")
-    CPrint("   options   Shows the addon options.")
-    CPrint("   enable    Enables the addon (default)")
-    CPrint("   disable   Disables the addon")
-    CPrint("   clear     Clears the greeting cache")
-    CPrint("   reset      Restore default settings")
+    Utils:cprint("GuildAutoGreeter")
+    Utils:cprint("Usage:  /autogreet <command>")
+    Utils:cprint("============================")
+    Utils:cprint("   options   Shows the addon options.")
+    Utils:cprint("   enable    Enables the addon (default)")
+    Utils:cprint("   disable   Disables the addon")
+    Utils:cprint("   clear     Clears the greeting cache")
+    Utils:cprint("   reset      Restore default settings")
   elseif s == "options" then
     self:OnGuildGreetOptions()
   elseif s == "enable" then
@@ -307,10 +275,10 @@ function GuildAutoGreeter:OnSlashCommand(sCmd, sInput)
     self.config.enabled = false
     self:ApplySettings()
   elseif s == "clear" then
-    self.config = shallowcopy(defaultSettings)
+    self.config = deepcopy(defaultSettings)
     self:ApplySettings()
   elseif s == "reset" then
-    self.config = shallowcopy(defaultSettings)
+    self.config = deepcopy(defaultSettings)
     self:ApplySettings()
   end
 end
