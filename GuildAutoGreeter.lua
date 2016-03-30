@@ -8,7 +8,7 @@ local Utils = Apollo.GetPackage("SimpleUtils").tPackage
 local strInstructions = "Use {player} in a message to insert the player name.\n" ..
                         "To have a random message chosen, place multiple messages on separate lines."
 
-local Major, Minor, Patch, Suffix = 1, 9, 1, 0
+local Major, Minor, Patch, Suffix = 1, 10, 0, 0
 local GUILDAUTOGREETER_CURRENT_VERSION = string.format("%d.%d.%d", Major, Minor, Patch)
 
 local defaultSettings =
